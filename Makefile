@@ -1,20 +1,23 @@
 DEST_DIR = dest
 
-.PHONY: run dest
+.PHONY: run clean
 run: $(DEST_DIR)/haribote.img
 	qemu-system-i386 -fda $^
 
 clean:
-	rm -rf dest
+	rm -rf dest/*
 
 $(DEST_DIR)/haribote.img: $(DEST_DIR)/ipl.bin $(DEST_DIR)/haribote.sys
-	echo $(DEST_DIR)/haribote.sys > $(DEST_DIR)/haribote.name
-	dd if=$(DEST_DIR)/ipl.bin of=$(DEST_DIR)/haribote.img count=2880 bs=512 conv=notrunc
-	dd if=$(DEST_DIR)/haribote.name of=$(DEST_DIR)/haribote.img count=1 bs=512 seek=19 conv=notrunc
-	dd if=$(DEST_DIR)/haribote.sys of=$(DEST_DIR)/haribote.img count=1 bs=512 seek=33 conv=notrunc
+	# -B Use boot sector stored in the given file
+	# -C creates the disk image file to install the MS-DOS file system on it
+	# -f Specifies the size of the DOS file system to format.
+	#    1440   1440K, double-sided, 18 sectors per track, 80 cylinders (for 3 1/2 HD)
+	# -i image file
+	mformat -f 1440 -B $(DEST_DIR)/ipl.bin -C -i $(DEST_DIR)/haribote.img ::
+	mcopy -i $(DEST_DIR)/haribote.img $(DEST_DIR)/haribote.sys ::
 
-$(DEST_DIR)/ipl.bin: lpl.asm
-	nasm -o $@ $^
+$(DEST_DIR)/ipl.bin: ipl.s
+	nasm $^ -o $@ -l $(DEST_DIR)/ipl.lst
 
-$(DEST_DIR)/haribote.sys: lpl.asm
+$(DEST_DIR)/haribote.sys: haribote.s
 	nasm $^ -o $@ -l $(DEST_DIR)/haribote.lst
